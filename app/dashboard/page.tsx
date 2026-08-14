@@ -37,7 +37,14 @@ export default async function DashboardPage(){
     supabase.from("holdings").select("*,family_members!inner(id,name,default_broker,user_id)").eq("family_members.user_id",user.id).gt("remaining_quantity",0).order("buy_date"),
     supabase.from("exited_trades").select("*,family_members!inner(name,user_id)").eq("family_members.user_id",user.id).order("sell_date",{ascending:false}),
   ]);
-  if(memberError||lotError||tradeError)throw new Error(memberError?.message||lotError?.message||tradeError?.message);
+  if(memberError||lotError||tradeError){
+    console.error("Dashboard Supabase query failed", {
+      members: memberError,
+      holdings: lotError,
+      trades: tradeError,
+    });
+    throw new Error(memberError?.message||lotError?.message||tradeError?.message);
+  }
   const typedLots=(lots??[]) as unknown as HoldingLot[];const quotes=await getPortfolioMarketQuotes(typedLots);const typedTrades=(trades??[]) as unknown as ExitedTrade[];const summary=summarizePortfolio(aggregateLots(typedLots,quotes),typedTrades.reduce((s,t)=>s+Number(t.realized_pl),0));
   return <DashboardClient members={(members??[]) as FamilyMember[]} allLots={typedLots} initialSummary={summary} trades={typedTrades} quotes={quotes} showSignOut={!isAuthDisabled()}/>;
 }
