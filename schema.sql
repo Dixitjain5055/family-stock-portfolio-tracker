@@ -117,34 +117,34 @@ alter table public.exited_trades enable row level security;
 alter table public.corporate_actions enable row level security;
 
 drop policy if exists "members_select_own" on public.family_members;
-create policy "members_select_own" on public.family_members for select using (auth.uid() = user_id);
+create policy "members_select_own" on public.family_members for select using ((select auth.uid()) = user_id);
 drop policy if exists "members_insert_own" on public.family_members;
-create policy "members_insert_own" on public.family_members for insert with check (auth.uid() = user_id);
+create policy "members_insert_own" on public.family_members for insert with check ((select auth.uid()) = user_id);
 drop policy if exists "members_update_own" on public.family_members;
-create policy "members_update_own" on public.family_members for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "members_update_own" on public.family_members for update using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 drop policy if exists "members_delete_own" on public.family_members;
-create policy "members_delete_own" on public.family_members for delete using (auth.uid() = user_id);
+create policy "members_delete_own" on public.family_members for delete using ((select auth.uid()) = user_id);
 
 drop policy if exists "holdings_select_own" on public.holdings;
 create policy "holdings_select_own" on public.holdings for select using (
-  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid())
+  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid()))
 );
 drop policy if exists "holdings_insert_own" on public.holdings;
 create policy "holdings_insert_own" on public.holdings for insert with check (
-  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid())
+  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid()))
 );
 drop policy if exists "holdings_update_own" on public.holdings;
 create policy "holdings_update_own" on public.holdings for update using (
-  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid())
-) with check (exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid()));
+  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid()))
+) with check (exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid())));
 drop policy if exists "holdings_delete_own" on public.holdings;
 create policy "holdings_delete_own" on public.holdings for delete using (
-  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid())
+  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid()))
 );
 
 drop policy if exists "trades_select_own" on public.exited_trades;
 create policy "trades_select_own" on public.exited_trades for select using (
-  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = auth.uid())
+  exists (select 1 from public.family_members m where m.id = member_id and m.user_id = (select auth.uid()))
 );
 drop policy if exists "corporate_actions_authenticated_read" on public.corporate_actions;
 create policy "corporate_actions_authenticated_read" on public.corporate_actions for select to authenticated using (true);
@@ -165,7 +165,7 @@ returns table (
     sum(h.remaining_quantity * h.adjusted_buy_price) / nullif(sum(h.remaining_quantity), 0),
     sum(h.remaining_quantity * h.adjusted_buy_price), count(distinct h.member_id)
   from public.holdings h join public.family_members m on m.id = h.member_id
-  where m.user_id = auth.uid() and h.remaining_quantity > 0
+  where m.user_id = (select auth.uid()) and h.remaining_quantity > 0
     and (p_member_id is null or h.member_id = p_member_id)
   group by h.ticker, h.asset_type;
 $$;
@@ -182,7 +182,7 @@ begin
   if p_quantity <= 0 or p_sell_price <= 0 or p_fees < 0 then raise exception 'Invalid sale values'; end if;
   if p_tax_tag not in ('Short-Term','Long-Term') then raise exception 'Choose a valid holding period'; end if;
   select h.* into lot from public.holdings h join public.family_members m on m.id = h.member_id
-    where h.id = p_holding_id and h.member_id = p_member_id and m.user_id = auth.uid() for update of h;
+    where h.id = p_holding_id and h.member_id = p_member_id and m.user_id = (select auth.uid()) for update of h;
   if not found then raise exception 'Holding not found or forbidden'; end if;
   if p_quantity > lot.remaining_quantity then raise exception 'Sale quantity exceeds remaining quantity'; end if;
   if lot.buy_date is not null and p_sell_date < lot.buy_date then raise exception 'Sell date cannot precede buy date'; end if;

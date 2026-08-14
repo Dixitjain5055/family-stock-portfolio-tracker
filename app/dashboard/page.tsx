@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
+import { DatabaseUnavailable } from "@/components/dashboard/database-unavailable";
 import { aggregateLots, summarizePortfolio } from "@/lib/portfolio/calculations";
 import { getPortfolioMarketQuotes } from "@/lib/market/amfi";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { getSupabaseErrorStatus, isSupabaseConfigured } from "@/lib/supabase/config";
 import { isAuthDisabled, requireUser } from "@/lib/supabase/auth";
 import type { ExitedTrade, FamilyMember, HoldingLot, MarketQuote } from "@/types/portfolio";
 
@@ -38,12 +39,9 @@ export default async function DashboardPage(){
     supabase.from("exited_trades").select("*,family_members!inner(name,user_id)").eq("family_members.user_id",user.id).order("sell_date",{ascending:false}),
   ]);
   if(memberError||lotError||tradeError){
-    console.error("Dashboard Supabase query failed", {
-      members: memberError,
-      holdings: lotError,
-      trades: tradeError,
-    });
-    throw new Error(memberError?.message||lotError?.message||tradeError?.message);
+    const errors = [memberError, lotError, tradeError];
+    console.warn("Dashboard database request failed", errors.filter(Boolean).map((error) => error?.code ?? "unknown"));
+    return <DatabaseUnavailable status={getSupabaseErrorStatus(errors)} />;
   }
   const typedLots=(lots??[]) as unknown as HoldingLot[];const quotes=await getPortfolioMarketQuotes(typedLots);const typedTrades=(trades??[]) as unknown as ExitedTrade[];const summary=summarizePortfolio(aggregateLots(typedLots,quotes),typedTrades.reduce((s,t)=>s+Number(t.realized_pl),0));
   return <DashboardClient members={(members??[]) as FamilyMember[]} allLots={typedLots} initialSummary={summary} trades={typedTrades} quotes={quotes} showSignOut={!isAuthDisabled()}/>;
