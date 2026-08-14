@@ -1,0 +1,13 @@
+"use client";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
+import type { AggregatedHolding } from "@/types/portfolio";
+const colors=["#1b8577","#4fa896","#83c3ad","#c5a55a","#768993","#b9c4bf"];
+function ChartCard({title,description,data}:{title:string;description:string;data:Array<{name:string;value:number}>}){return <Card><CardHeader><h3 className="font-bold">{title}</h3><p className="mt-1 text-xs text-[var(--muted)]">{description}</p></CardHeader><CardContent>{data.some(d=>d.value>0)?<div className="h-64" role="img" aria-label={`${title} chart`}><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" nameKey="name" innerRadius={55} outerRadius={82} paddingAngle={2}>{data.map((entry,index)=><Cell key={entry.name} fill={colors[index%colors.length]}/>)}</Pie><Tooltip formatter={(value)=>formatCurrency(Number(value))}/><Legend iconType="circle" wrapperStyle={{fontSize:11}}/></PieChart></ResponsiveContainer></div>:<div className="grid h-64 place-items-center text-center text-sm text-[var(--muted)]">Add holdings with market data to see this chart.</div>}</CardContent></Card>}
+export function Analytics({holdings,combined}:{holdings:AggregatedHolding[];combined:boolean}){
+  const sectorMap=new Map<string,number>();for(const h of holdings){const key=h.assetType==="mutual_fund"?"Mutual funds":h.quote?.sector??"Unclassified";sectorMap.set(key,(sectorMap.get(key)??0)+(h.currentValue??h.invested))}
+  const capMap=new Map<string,number>();for(const h of holdings.filter(row=>row.assetType==="stock")){const cap=h.quote?.marketCap;const key=cap==null?"Unclassified":cap>=1e12?"Large cap":cap>=2e11?"Mid cap":"Small cap";capMap.set(key,(capMap.get(key)??0)+(h.currentValue??h.invested))}
+  const memberMap=new Map<string,number>();for(const h of holdings)for(const o of h.owners)memberMap.set(o.memberName,(memberMap.get(o.memberName)??0)+(h.currentPrice==null?o.invested:o.quantity*h.currentPrice));
+  return <div className="grid gap-4 md:grid-cols-2"><ChartCard title="Sector allocation" description="Market value by reported sector" data={[...sectorMap].map(([name,value])=>({name,value}))}/><ChartCard title="Market-cap mix" description="Large, mid, and small-cap exposure" data={[...capMap].map(([name,value])=>({name,value}))}/>{combined&&<ChartCard title="Member allocation" description="Current family portfolio ownership" data={[...memberMap].map(([name,value])=>({name,value}))}/>}</div>;
+}

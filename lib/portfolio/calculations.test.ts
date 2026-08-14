@@ -1,0 +1,15 @@
+import { describe, expect, it } from "vitest";
+import { aggregateLots, summarizePortfolio, weightedAverage } from "./calculations";
+import type { HoldingLot, MarketQuote } from "@/types/portfolio";
+
+const member=(id:string,name:string)=>({id,name,default_broker:null});
+function lot(id:string,memberId:string,name:string,quantity:number,price:number):HoldingLot{return{id,member_id:memberId,ticker:"SHARED.NS",asset_type:"stock",exchange:"NSE",company_name:"Shared Co",quantity,remaining_quantity:quantity,buy_price:price,adjusted_buy_price:price,buy_date:"2025-01-01",broker:null,source:"manual",status:"open",created_at:"2025-01-01T00:00:00Z",updated_at:"2025-01-01T00:00:00Z",family_members:member(memberId,name)};}
+const quote:MarketQuote={ticker:"SHARED.NS",price:30,previousClose:29,change:1,changePercent:3.448,currency:"INR",marketTime:"2026-01-01T00:00:00Z",sector:null,marketCap:null,stale:false};
+
+describe("portfolio calculations",()=>{
+  it("uses a quantity-weighted average",()=>{expect(weightedAverage([{quantity:100,price:10},{quantity:50,price:20}])).toBeCloseTo(13.333333,5)});
+  it("consolidates a shared ticker once and preserves member ownership",()=>{const result=aggregateLots([lot("1","a","Ravi",100,10),lot("2","b","Anita",50,20)],[quote]);expect(result).toHaveLength(1);expect(result[0].quantity).toBe(150);expect(result[0].averagePrice).toBeCloseTo(13.333333,5);expect(result[0].owners).toHaveLength(2);expect(result[0].currentValue).toBe(4500);expect(result[0].unrealizedPl).toBe(2500)});
+  it("keeps an unavailable holding in the total at disclosed acquisition cost",()=>{const holdings=aggregateLots([lot("1","a","Ravi",10,10)],[]);const summary=summarizePortfolio(holdings);expect(summary.totalInvested).toBe(100);expect(summary.totalValue).toBe(100);expect(summary.unrealizedPl).toBe(0);expect(holdings[0].valuationFallback).toBe(true);expect(summary.partialMarketData).toBe(true)});
+  it("reports today's P/L from available session quotes without treating missing fund movement as zero",()=>{const stock=lot("1","a","Ravi",10,10);const fund={...lot("2","a","Ravi",5,20),ticker:"INF000000001",asset_type:"mutual_fund" as const,company_name:"Example Fund"};const fundNav={...quote,ticker:"INF000000001",price:21,change:null,changePercent:null};const summary=summarizePortfolio(aggregateLots([stock,fund],[quote,fundNav]));expect(summary.dayChange).toBe(10);expect(summary.dayChangePercent).toBeCloseTo(3.448,2);expect(summary.dayChangeCoverage).toBe(50);expect(summary.totalValue).toBe(405)});
+  it("values mutual-fund units using active NAV and keeps the asset type",()=>{const fund={...lot("fund","a","Ravi",125.5,20),ticker:"0P000TEST.BO",asset_type:"mutual_fund" as const,exchange:"MUTUAL_FUND",company_name:"Test Growth Fund"};const nav={...quote,ticker:"0P000TEST.BO",price:24.2,instrumentType:"MUTUALFUND"};const [result]=aggregateLots([fund],[nav]);expect(result.assetType).toBe("mutual_fund");expect(result.quantity).toBe(125.5);expect(result.currentValue).toBeCloseTo(3037.1,5)});
+});

@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --canvas: #f5f7f3;
+  --surface: #ffffff;
+  --surface-2: #f0f3ee;
+  --ink: #14232a;
+  --ink-soft: #2e4249;
+  --muted: #6a7a7e;
+  --border: #dfe6df;
+  --accent: #1b8577;
+  --accent-strong: #11675d;
+  --accent-wash: #dff3ed;
+  --ring: #41a899;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0c1418;
+  --surface: #142027;
+  --surface-2: #1b2a31;
+  --ink: #ecf4f2;
+  --ink-soft: #c9d8d5;
+  --muted: #93a8aa;
+  --border: #2a3c43;
+  --accent: #42b9a5;
+  --accent-strong: #75d5c4;
+  --accent-wash: #173d38;
+  --ring: #58c5b3;
+}
+
+* { box-sizing: border-box; border-color: var(--border); }
+html { scroll-behavior: smooth; }
+body { margin: 0; color: var(--ink); background: var(--canvas); font-family: var(--font-manrope), sans-serif; transition: color .2s ease, background-color .2s ease; }
+.font-display { font-family: var(--font-newsreader), serif; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+::selection { background: var(--accent-wash); color: var(--accent-strong); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

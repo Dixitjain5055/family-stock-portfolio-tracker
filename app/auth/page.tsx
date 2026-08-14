@@ -1,0 +1,12 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
+import { AuthForm } from "@/components/auth-form";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isAuthDisabled } from "@/lib/supabase/auth";
+
+export default function AuthPage() {
+  if (isAuthDisabled()) redirect("/dashboard");
+  const configured = isSupabaseConfigured();
+  return <main className="grid min-h-screen bg-[var(--canvas)] lg:grid-cols-[1.05fr_.95fr]"><section className="hidden bg-[var(--ink)] p-12 text-white lg:flex lg:flex-col lg:justify-between"><Link href="/" className="flex items-center gap-2 font-bold"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[var(--accent)]">K</span>Kinfolio</Link><div className="max-w-xl"><p className="text-xs font-bold uppercase tracking-[.18em] text-emerald-300">Private family wealth</p><h1 className="font-display mt-5 text-6xl font-semibold leading-[1.02] tracking-tight">One household.<br/>Every lot protected.</h1><div className="mt-9 space-y-4 text-sm text-slate-300">{["Separate data for every signed-in household", "Exact member and acquisition-lot ownership", "Server-only market data and database administration"].map((item) => <p className="flex items-center gap-3" key={item}><CheckCircle2 className="text-emerald-300" size={18} />{item}</p>)}</div></div><p className="text-xs text-slate-400">Your service-role key never enters the browser.</p></section><section className="grid place-items-center px-4 py-10"><div className="w-full max-w-md"><Link href="/" className="flex items-center gap-2 font-bold lg:hidden"><span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--accent)] text-white">K</span>Kinfolio</Link><p className="text-xs font-bold uppercase tracking-[.16em] text-[var(--accent-strong)]">Secure portfolio access</p><h2 className="font-display mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">Welcome to your family portfolio.</h2><p className="mt-3 text-sm leading-6 text-[var(--muted)]">Sign in with a password, create an account, or request a passwordless email link.</p>{configured ? <AuthForm /> : <div className="mt-7 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">Supabase is not configured yet. Add the project values to <code>.env.local</code> and restart the app.</div>}</div></section></main>;
+}

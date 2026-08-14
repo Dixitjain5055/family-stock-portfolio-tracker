@@ -1,0 +1,2 @@
+export default function Loading(){return <main className="min-h-screen bg-[var(--canvas)] p-6"><div className="mx-auto max-w-[1500px] animate-pulse"><div className="h-12 rounded-xl bg-slate-200"/><div className="mt-12 h-16 w-96 max-w-full rounded-xl bg-slate-200"/><div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-6">{Array.from({length:6},(_,i)=><div className="h-32 rounded-2xl bg-slate-200" key={i}/>)}</div><div className="mt-8 h-96 rounded-2xl bg-slate-200"/></div></main>}
+
